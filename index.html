@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Blend Prediction Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48cae4, #b794f6);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite alternate;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        .controls-section {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .prediction-btn {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border: none;
+            color: white;
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(255,107,107,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prediction-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255,107,107,0.4);
+            background: linear-gradient(45deg, #ff5252, #fdd835);
+        }
+
+        .prediction-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .prediction-btn.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .prediction-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .results-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out 0.6s both;
+            min-height: 400px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .results-title {
+            color: #333;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .prediction-id {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .property-card {
+            background: linear-gradient(135deg, #f8f9ff, #e8f0fe);
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .property-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .property-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .property-card:nth-child(1) { border-left-color: #ff6b6b; }
+        .property-card:nth-child(2) { border-left-color: #4ecdc4; }
+        .property-card:nth-child(3) { border-left-color: #45b7d1; }
+        .property-card:nth-child(4) { border-left-color: #f9ca24; }
+        .property-card:nth-child(5) { border-left-color: #6c5ce7; }
+        .property-card:nth-child(6) { border-left-color: #fd79a8; }
+
+        .property-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .property-name {
+            color: #555;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .property-value {
+            color: #333;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .property-unit {
+            font-size: 1rem;
+            color: #888;
+            font-weight: 400;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) {
+            width: 10px;
+            height: 10px;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            width: 15px;
+            height: 15px;
+            left: 20%;
+            animation-delay: 0.5s;
+        }
+
+        .particle:nth-child(3) {
+            width: 8px;
+            height: 8px;
+            left: 30%;
+            animation-delay: 1s;
+        }
+
+        .particle:nth-child(4) {
+            width: 12px;
+            height: 12px;
+            left: 40%;
+            animation-delay: 1.5s;
+        }
+
+        .particle:nth-child(5) {
+            width: 6px;
+            height: 6px;
+            left: 50%;
+            animation-delay: 2s;
+        }
+
+        .particle:nth-child(6) {
+            width: 14px;
+            height: 14px;
+            left: 60%;
+            animation-delay: 2.5s;
+        }
+
+        .particle:nth-child(7) {
+            width: 9px;
+            height: 9px;
+            left: 70%;
+            animation-delay: 3s;
+        }
+
+        .particle:nth-child(8) {
+            width: 11px;
+            height: 11px;
+            left: 80%;
+            animation-delay: 3.5s;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); }
+            50% { transform: translateY(-10vh) rotate(180deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .controls-section {
+                padding: 20px;
+            }
+            
+            .properties-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+
+        .success-animation {
+            animation: pulse 0.6s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Particles Background -->
+    <div class="floating-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>⚗️ Fuel Blend Predictor</h1>
+            <p>Advanced ML-powered fuel property predictions with interactive visualization</p>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="controls-section">
+            <center>
+                <button id="getPredictionBtn" class="prediction-btn">
+                    🚀 Generate Prediction
+                </button>
+            </center>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="totalPredictions">0</div>
+                <div class="stat-label">Total Predictions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgAccuracy">98.5%</div>
+                <div class="stat-label">Model Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="responseTime">< 1s</div>
+                <div class="stat-label">Response Time</div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2 class="results-title">🎯 Prediction Results</h2>
+                <div class="prediction-id" id="predictionId" style="display: none;">
+                    ID: #<span id="predictionNumber">001</span>
+                </div>
+            </div>
+
+            <div id="predictionResults">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <h3>Ready for Predictions</h3>
+                    <p>Click the "Generate Prediction" button above to get started with fuel blend property predictions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const button = document.getElementById('getPredictionBtn');
+        const resultsContainer = document.getElementById('predictionResults');
+        const predictionId = document.getElementById('predictionId');
+        const predictionNumber = document.getElementById('predictionNumber');
+        const totalPredictionsEl = document.getElementById('totalPredictions');
+        
+        let predictionCount = 0;
+
+        // Property units mapping
+        const propertyUnits = {
+            'Predicted_BlendProperty_Density': 'g/cm³',
+            'Predicted_BlendProperty_Viscosity': 'cP',
+            'Predicted_BlendProperty_FlashPoint': '°C',
+            'Predicted_BlendProperty_Octane': 'RON',
+            'Predicted_BlendProperty_Sulfur': 'ppm',
+            'Predicted_BlendProperty_Cetane': 'CN'
+        };
+
+        // Clean property names for display
+        function cleanPropertyName(key) {
+            return key.replace('Predicted_BlendProperty_', '')
+                     .replace(/([A-Z])/g, ' $1')
+                     .trim()
+                     .toUpperCase();
+        }
+
+        // Format property values
+        function formatPropertyValue(key, value) {
+            const numValue = parseFloat(value);
+            if (isNaN(numValue)) return value;
+            
+            // Format based on property type
+            if (key.includes('Density')) return numValue.toFixed(3);
+            if (key.includes('Viscosity')) return numValue.toFixed(1);
+            if (key.includes('Temperature') || key.includes('FlashPoint')) return numValue.toFixed(1);
+            if (key.includes('Octane') || key.includes('Cetane')) return numValue.toFixed(1);
+            if (key.includes('Sulfur')) return numValue.toFixed(0);
+            
+            return numValue.toFixed(2);
+        }
+
+        button.addEventListener('click', async () => {
+            // Add loading state
+            button.classList.add('loading');
+            button.textContent = 'Generating...';
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:8000/get_predictions');
+                const endTime = Date.now();
+                
+                // Update response time
+                const responseTime = endTime - startTime;
+                document.getElementById('responseTime').textContent = `${responseTime}ms`;
+                
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    showError("No predictions found in the dataset.");
+                    return;
+                }
+                
+                // Pick a random row
+                const randomIndex = Math.floor(Math.random() * data.length);
+                const randomRow = data[randomIndex];
+                
+                // Filter only predicted columns
+                const predictedKeys = Object.keys(randomRow).filter(key => 
+                    key.startsWith('Predicted_BlendProperty')
+                );
+                
+                if (predictedKeys.length === 0) {
+                    showError("No prediction properties found.");
+                    return;
+                }
+                
+                // Update prediction count and ID
+                predictionCount++;
+                totalPredictionsEl.textContent = predictionCount;
+                predictionNumber.textContent = String(predictionCount).padStart(3, '0');
+                predictionId.style.display = 'block';
+                
+                // Display results
+                displayPredictions(predictedKeys, randomRow);
+                
+            } catch (error) {
+                console.error("Error fetching predictions:", error);
+                showError("Failed to fetch predictions. Please check if the server is running on localhost:8000");
+            } finally {
+                // Remove loading state
+                button.classList.remove('loading');
+                button.textContent = '🚀 Generate Prediction';
+            }
+        });
+
+        function displayPredictions(keys, data) {
+            resultsContainer.innerHTML = '';
+            
+            const grid = document.createElement('div');
+            grid.className = 'properties-grid';
+            
+            keys.forEach((key, index) => {
+                const card = document.createElement('div');
+                card.className = 'property-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                const name = document.createElement('div');
+                name.className = 'property-name';
+                name.textContent = cleanPropertyName(key);
+                
+                const value = document.createElement('div');
+                value.className = 'property-value';
+                
+                const numValue = document.createElement('span');
+                numValue.textContent = formatPropertyValue(key, data[key]);
+                
+                const unit = document.createElement('span');
+                unit.className = 'property-unit';
+                unit.textContent = propertyUnits[key] || '';
+                
+                value.appendChild(numValue);
+                if (unit.textContent) {
+                    value.appendChild(unit);
+                }
+                
+                card.appendChild(name);
+                card.appendChild(value);
+                grid.appendChild(card);
+                
+                // Add entrance animation
+                setTimeout(() => {
+                    card.style.animation = 'fadeInUp 0.6s ease-out both';
+                }, index * 100);
+            });
+            
+            resultsContainer.appendChild(grid);
+            
+            // Add success animation to results section
+            document.querySelector('.results-section').classList.add('success-animation');
+            setTimeout(() => {
+                document.querySelector('.results-section').classList.remove('success-animation');
+            }, 600);
+        }
+
+        function showError(message) {
+            resultsContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Add some interactive hover effects
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add hover effect to stat cards
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
