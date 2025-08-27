@@ -3,6 +3,8 @@ import pandas as pd
 import joblib
 import pymysql  # Added import for the MySQL driver
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+import os
 
 # Define the model and data file paths
 MODEL_PATH = "model_compressed.pkl"
@@ -41,9 +43,11 @@ PREDICTED_PROPERTY_NAMES = [
     'Predicted_BlendProperty_10',
 ]
 
+
+
 @app.get("/")
-def root():
-    return {"message": "Fuel Blend Prediction API is running!"}
+def read_root():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 
 @app.get("/get_predictions")
 def get_predictions():
@@ -74,4 +78,5 @@ def get_predictions():
     # Combine input + predicted columns
     result_df = pd.concat([df, pred_df], axis=1)
     
+
     return result_df.to_dict(orient="records")
